@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <time.h>
+#include <DHT.h>
 
 
 #define SCREEN_WIDTH 128
@@ -18,6 +19,8 @@ bool showDots = true;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 WiFiMulti wifiMulti;
+DHT dht(18,DHT11);
+
 
 void desenharBarrasWiFi(int x, int y) {
   int rssi = WiFi.RSSI();
@@ -44,7 +47,7 @@ void desenharBarrasWiFi(int x, int y) {
 
 void setup() {
   Serial.begin(115200);
-
+  dht.begin();
   wifiMulti.addAP("SPRULES_2G", "MorganArthur2610");
   wifiMulti.addAP("2ANDAR", "MorganArthur2610");
 
@@ -96,17 +99,30 @@ void loop() {
     return;
   }
   
+  float umidade = dht.readHumidity();
+  float temperatura = dht.readTemperature();
+
+  if (isnan(umidade) || isnan(temperatura)){
+    Serial.println("Falha dht");
+  }else{
+    Serial.print(umidade);
+    Serial.print(" ");
+    Serial.print(temperatura);
+    Serial.println("C");
+
+  }
+
   display.clearDisplay();
   display.setCursor(0,4);
   display.setTextSize(1);
-  display.print(WiFi.SSID());
+  display.printf("%s %ddBm", WiFi.SSID().c_str(), WiFi.RSSI());
   display.setTextSize(3);
   display.setCursor(20, 20);
   display.printf("%02d%c%02d", timeinfo.tm_hour, showDots ? ':' : ' ', timeinfo.tm_min);
   showDots = !showDots;  // inverte: true vira false, false vira true
   display.setTextSize(1);
-  display.setCursor(34,55);
-  display.printf("%02d/%02d/%04d", timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
+  display.setCursor(25,55);
+  display.printf("T:%.1fC U:%.0f%%", temperatura, umidade);
   desenharBarrasWiFi(110, 2);
   display.display();
   delay(1000);
